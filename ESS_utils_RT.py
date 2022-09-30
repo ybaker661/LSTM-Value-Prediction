@@ -362,7 +362,7 @@ Evaluation Functions
 def CNNLSTM_evaluate(model, DAP, RTP, 
   startTest, stopTest, lastDay, 
   num_DAP, num_RTP, TX=False, Pr=0.25, Ts=1/12,
-  eta=0.9, c=10):
+  eta=0.9, c=10, rebin=None):
 
     Ts = Ts
     Pr = Pr # normalized power rating wrt energy rating (highest power input allowed to flow through particular equipment)
@@ -443,7 +443,8 @@ def CNNLSTM_evaluate(model, DAP, RTP,
     eS_test = np.zeros(v3.shape[1]) # generate the SoC series
     pS_test = np.zeros(v3.shape[1]) # generate the power series
     e = e0 # initial SoC
-
+    if rebin is not None:
+      v3 = rebin_up(v3, rebin)
     for t in range(T2): # start from the first day and move forwards
         vv = v3[:, t+1]
         e, p = ArbValue(tlambda_RTP_test[day+t], vv, e, P, 1, eta, c, v3.shape[0])
@@ -532,7 +533,17 @@ def hr_rebin_1(RTP, Ts):
     RTPhr[i, :] = np.mean(RTP[i*int(1/Ts):(i+1)*int(1/Ts), :], axis=0)
   return RTPhr
 
+def rebin_up(v, n=10):
+  #upsampling texas RTP
+  vout = np.zeros((v.shape[0]*n, v.shape[1]))
 
+
+  for i in range(v.shape[1]):
+    for j in range(v.shape[0]-1) :
+      currv = np.linspace(v[j,i], v[j+1, i], n)
+      vout[int(j*n):int((j+1)*n), i] = currv
+
+  return vout
 
 def evaluate_using_v_hr(lmp, v, 
           eta, c, T, 
